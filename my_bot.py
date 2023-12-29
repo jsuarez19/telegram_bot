@@ -1,6 +1,6 @@
-from telegram import Update, ReplyKeyboardMarkup, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler, CallbackQueryHandler
-from emociones_data import diccionario_emociones, emotions
+from emociones_data import diccionario_emociones, all_emotions
 
 API_TOKEN = "6602630016:AAEd7FNd9vk3YeyLxA55L2M7AKYbOgCZnlU"
 
@@ -27,21 +27,23 @@ def select_group(update: Update, context: CallbackContext) -> int:
 
     context.user_data["selected_group"] = query.data
 
-    keyboard = [[InlineKeyboardButton(emotion, callback_data=emotion) for emotion in emotions['Agradables']] if query.data == "Agradables" else
-                [InlineKeyboardButton(emotion, callback_data=emotion) for emotion in emotions['Desagradables']]]
+    if query.data == "Agradables":
+        keyboard = [[InlineKeyboardButton(emotion, callback_data=emotion) for emotion in all_emotions['Agradables']]]
+    else:
+        keyboard = []
+        selected_emotions = all_emotions['Desagradables']
+        for i in range(0, len(selected_emotions), 3):
+            row = [InlineKeyboardButton(emotion, callback_data=emotion) for emotion in selected_emotions[i:i+3]]
+            keyboard.append(row)
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.edit_message_text(f"Has seleccionado el grupo de emociones '{context.user_data['selected_group']}'. Ahora elige una emoción:", reply_markup=reply_markup)
-
-    """ Old code for keyboard
-    context.user_data["selected_group"] = update.message.text
-    update.message.reply_text(
-        f"Has seleccionado el grupo de emociones '{context.user_data['selected_group']}'.\n"
-        "Ahora elige una emoción:",
-        reply_markup=get_emotions_keyboard(context.user_data['selected_group']),
+    context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=f"Has seleccionado el grupo de emociones '{context.user_data['selected_group']}'. Ahora elige una emoción:",
+        reply_markup=reply_markup
     )
-    """
+
     return SELECT_EMOTION
 
 def select_emotion(update: Update, context: CallbackContext) -> int:
@@ -59,19 +61,6 @@ def select_emotion(update: Update, context: CallbackContext) -> int:
     # Enviar el mensaje con formato Markdown y teclado en línea
     query.edit_message_text(emotion_info, reply_markup=inline_keyboard, parse_mode='Markdown')
 
-
-    """Old code
-    context.user_data["selected_emotion"] = update.message.text
-
-    # Llamar a una función que devuelva la información de la emoción
-    emotion_info = get_emotion_info(context.user_data['selected_emotion'])
-    
-    update.message.reply_text(
-        emotion_info,
-        reply_markup=get_groups_keyboard(),
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    """
     return SELECT_GROUP
 
 def get_groups_keyboard():
@@ -85,19 +74,21 @@ def get_groups_keyboard():
     return InlineKeyboardMarkup(groups)
 
 
+"""
 def get_emotions_keyboard(selected_group):
-    # Obtén todas las emociones del grupo seleccionado
-    all_emotions = emotions[selected_group]
+ # Obtén todas las emociones del grupo seleccionado
+    selected_emotions = all_emotions[selected_group]
 
     # Crea botones usando InlineKeyboardButton, 3 botones por línea
-    keyboard = [
-        [InlineKeyboardButton(emotion, callback_data=emotion) for emotion in all_emotions[i:i+3]]
-        for i in range(0, len(all_emotions), 3)
-    ]
-    
+    buttons_per_line = 3
+
+    keyboard = []
+    for i in range(0, len(selected_emotions), buttons_per_line):
+        row = [InlineKeyboardButton(emotion, callback_data=emotion) for emotion in selected_emotions[i:i+buttons_per_line]]
+        keyboard.append(row)
+
     return InlineKeyboardMarkup(keyboard)
-
-
+"""
 
 def get_emotion_info(selected_emotion):
     info = diccionario_emociones[selected_emotion]
